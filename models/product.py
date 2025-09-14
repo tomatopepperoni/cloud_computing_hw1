@@ -7,84 +7,84 @@ from decimal import Decimal
 from pydantic import BaseModel, Field, StringConstraints
 
 # =========================================================================
-# 🛍️ Product 모델: 전자상거래 시스템의 상품 정보를 관리하는 핵심 도메인 모델!!
-# - 상품의 기본 정보, 가격, 재고 등을 포함!! 💰
-# - SKU(Stock Keeping Unit)를 통한 고유 식별 시스템 구현!! 🏷️
-# - 재고 관리 및 상품 활성화/비활성화 상태 관리!! 📦
-# - Pydantic v2를 사용한 강력한 데이터 검증!! ✅
+# Product Model: 전자상거래 시스템의 상품 정보를 관리하는 핵심 도메인 모델!!
+# - 상품의 basic info, 가격, inventory 등을 포함!!
+# - SKU(Stock Keeping Unit)를 통한 unique identification system 구현!!
+# - 재고 관리 및 상품 activation/deactivation 상태 관리!!
+# - Pydantic v2를 사용한 강력한 data validation!! super important~~~
 # =========================================================================
 
-# 🏷️ 상품 카테고리 타입 정의 - 문자열 길이 제한으로 데이터 무결성 보장!!
-# 최소 1자, 최대 50자로 제한해서 DB 성능 최적화!! 🚀
+# Product Category Type Definition - string length constraint로 data integrity 보장!!
+# minimum 1자, maximum 50자로 제한해서 DB performance optimization!! 
 CategoryType = Annotated[str, StringConstraints(min_length=1, max_length=50)]
 
-# 🔖 SKU(Stock Keeping Unit) 타입 정의 - 정규표현식으로 형식 검증!!
-# 패턴: 대문자, 숫자, 하이픈만 허용하여 표준화된 SKU 형식 유지!! 
-# 예시: "MBP-2024", "IPH15-256GB" 등!! 📱💻
+# SKU(Stock Keeping Unit) Type Definition - regex pattern으로 format validation!!
+# Pattern: 대문자, 숫자, hyphen만 허용하여 standardized SKU format 유지!! 
+# Examples: "MBP-2024", "IPH15-256GB" 등등~~ very important!!
 SKUType = Annotated[str, StringConstraints(pattern=r"^[A-Z0-9\-]{3,20}$")]
 
 
 class ProductBase(BaseModel):
     """
-    🎯 ===================================================================
-    ProductBase: 상품의 기본 속성들을 정의하는 베이스 모델!! 
-    - DDD(Domain Driven Design) 패턴 적용으로 도메인 로직 캡슐화!! 🏗️
-    - 모든 Product 관련 모델들이 상속받는 공통 스키마!! 📋
-    - Pydantic 검증을 통한 데이터 무결성 보장!! 🛡️
-    - 전자상거래의 핵심!! 상품 정보를 완벽하게 관리!! 💪
+    ===================================================================
+    ProductBase: 상품의 basic attributes들을 정의하는 base model!! 
+    - DDD(Domain Driven Design) pattern 적용으로 domain logic encapsulation!!
+    - 모든 Product related models들이 inherit받는 common schema!!
+    - Pydantic validation을 통한 data integrity 보장!! super critical~~~
+    - E-commerce의 core!! product information을 perfectly manage!!
     ===================================================================
     """
-    # 📝 상품명 - 필수 필드!! 길이 제한으로 UI/DB 호환성 보장!!
+    # Product Name - required field!! length limit으로 UI/DB compatibility 보장!!
     name: str = Field(
-        ...,  # 필수 필드 표시!! 절대 비어있으면 안됨!!
+        ...,  # required field 표시!! 절대 empty하면 안됨!!
         description="Product name",
-        min_length=1,  # 빈 문자열 방지!! 최소 1글자는 있어야 함!!
-        max_length=200,  # DB VARCHAR 제한 고려!! 너무 길면 DB 터짐!!
+        min_length=1,  # empty string 방지!! minimum 1글자는 있어야 함!!
+        max_length=200,  # DB VARCHAR limit 고려!! 너무 길면 DB crash!!
         json_schema_extra={"example": "MacBook Pro 16-inch"},
     )
     
-    # 📖 상품 설명 - 선택적 필드!! 마케팅 및 SEO 용도로 중요!!
+    # Product Description - optional field!! marketing 및 SEO purpose로 important!!
     description: Optional[str] = Field(
-        None,  # 선택적 필드!! 없어도 됨!!
+        None,  # optional field!! 없어도 OK~~
         description="Detailed product description",
-        max_length=1000,  # 긴 설명 허용하되 제한!! 너무 길면 성능 저하!!
+        max_length=1000,  # long description 허용하되 limit!! 너무 길면 performance degradation!!
         json_schema_extra={"example": "High-performance laptop with M3 chip"},
     )
     
-    # 🏷️ SKU - 재고 관리의 핵심 식별자!! 비즈니스 로직에서 중요한 역할!!
+    # SKU - inventory management의 핵심 identifier!! business logic에서 crucial role!!
     sku: SKUType = Field(
-        ...,  # 필수!! SKU 없으면 재고 관리 불가능!!
+        ...,  # required!! SKU 없으면 inventory management impossible!!
         description="Stock Keeping Unit - unique product identifier (3-20 alphanumeric chars with hyphens)",
         json_schema_extra={"example": "MBP16-M3-512GB"},
     )
     
-    # 📂 카테고리 - 상품 분류 및 필터링을 위한 분류 체계!! 검색에 필수!!
+    # Category - product classification 및 filtering을 위한 taxonomy!! search에 essential!!
     category: CategoryType = Field(
-        ...,  # 필수!! 카테고리 없으면 분류 불가!!
+        ...,  # required!! category 없으면 classification impossible!!
         description="Product category (1-50 characters)",
         json_schema_extra={"example": "Electronics"},
     )
     
-    # 💰 가격 - Decimal 사용으로 부동소수점 오차 방지!! 금융 데이터의 정확성!!
+    # Price - Decimal 사용으로 floating point error 방지!! financial data의 accuracy!!
     price: Decimal = Field(
-        ...,  # 필수!! 가격 없는 상품은 있을 수 없음!!
+        ...,  # required!! price 없는 product는 있을 수 없음!!
         description="Product price in USD",
-        gt=0,  # 0보다 큰 값만 허용!! 음수 가격 방지!! 공짜는 없다!!
-        decimal_places=2,  # 센트 단위까지만 허용!! $99.99 형식!!
+        gt=0,  # 0보다 큰 값만 allow!! negative price 방지!! no free lunch~~
+        decimal_places=2,  # cent 단위까지만 allow!! $99.99 format!!
         json_schema_extra={"example": 2499.99},
     )
     
-    # 📦 재고 수량 - 재고 관리 시스템의 핵심 데이터!! 매우 중요!!
+    # Stock Quantity - inventory management system의 core data!! extremely important!!
     stock_quantity: int = Field(
-        ...,  # 필수!! 재고 수량 모르면 판매 불가!!
+        ...,  # required!! stock quantity 모르면 sale impossible!!
         description="Available stock quantity",
-        ge=0,  # 음수 재고 방지!! 마이너스 재고는 말이 안됨!!
+        ge=0,  # negative inventory 방지!! minus stock은 말이 안됨!!
         json_schema_extra={"example": 50},
     )
     
-    # ✅ 활성화 상태 - 상품 노출 제어를 위한 플래그!! 소프트 삭제 패턴!!
+    # Active Status - product exposure control을 위한 flag!! soft delete pattern!!
     is_active: bool = Field(
-        True,  # 기본값: 활성화!! 새 상품은 기본적으로 활성!!
+        True,  # default: active!! new product는 기본적으로 active!!
         description="Whether the product is active/available for sale",
         json_schema_extra={"example": True},
     )

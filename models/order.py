@@ -7,28 +7,28 @@ from decimal import Decimal
 from enum import Enum
 from pydantic import BaseModel, Field, StringConstraints
 
-# 🛒 =========================================================================
-# Order 모델: 전자상거래 주문 관리 시스템의 핵심 도메인 모델!!
-# - 복잡한 비즈니스 로직을 포함한 주문 생명주기 관리!! 📊
-# - 고객, 상품, 결제 정보를 통합하는 집계 루트(Aggregate Root) 역할!! 🎯
-# - 주문 상태 기계(State Machine) 패턴 적용!! 상태 전이 완벽 관리!! ⚡
-# - 전자상거래에서 가장 복잡하고 중요한 모델!! 💰
+# =========================================================================
+# Order Model: e-commerce 주문 관리 system의 core domain model!!
+# - Complex business logic을 포함한 order lifecycle management!!
+# - Customer, Product, Payment info를 integrate하는 aggregate root role!!
+# - Order state machine pattern 적용!! state transition perfect management~~~
+# - E-commerce에서 가장 complex하고 important한 model!!
 # =========================================================================
 
-# 📊 주문 상태 열거형 - 주문의 생명주기를 명확히 정의!! 매우 중요!!
-# 상태 전이: PENDING → CONFIRMED → PROCESSING → SHIPPED → DELIVERED ✅
-# 또는 언제든지 CANCELLED로 전이 가능!! 비즈니스 규칙에 따라!! ❌
+# Order Status Enumeration - order의 lifecycle을 clearly define!! extremely important~~
+# State Transition: PENDING → CONFIRMED → PROCESSING → SHIPPED → DELIVERED 
+# 또는 언제든지 CANCELLED로 transition possible!! business rule에 따라!!
 class OrderStatus(str, Enum):
-    PENDING = "pending"        # 💳 결제 대기 중!! 아직 결제 안됨!!
-    CONFIRMED = "confirmed"    # ✅ 결제 완료!! 처리 대기 상태!!
-    PROCESSING = "processing"  # 📦 주문 처리 중!! 포장, 준비 단계!!
-    SHIPPED = "shipped"        # 🚚 배송 시작!! 고객에게 이동 중!!
-    DELIVERED = "delivered"    # 🎉 배송 완료!! 고객이 받음!!
-    CANCELLED = "cancelled"    # ❌ 주문 취소!! 더 이상 진행 안됨!!
+    PENDING = "pending"        # Payment waiting!! 아직 payment 안됨!!
+    CONFIRMED = "confirmed"    # Payment completed!! processing 대기 상태!!
+    PROCESSING = "processing"  # Order processing!! packaging, preparation 단계!!
+    SHIPPED = "shipped"        # Delivery started!! customer에게 moving 중!!
+    DELIVERED = "delivered"    # Delivery completed!! customer가 받음!!
+    CANCELLED = "cancelled"    # Order cancelled!! 더 이상 proceed 안됨!!
 
-# 🏷️ 주문번호 타입 정의 - 표준화된 주문번호 형식 강제!! 매우 중요!!
-# 형식: ORD-YYYYMMDD-NNNN (예: ORD-20250913-0001) 📅
-# 날짜 기반으로 주문 추적 및 정렬 용이성 제공!! 운영팀이 좋아함!! 👍
+# Order Number Type Definition - standardized order number format 강제!! extremely important~~
+# Format: ORD-YYYYMMDD-NNNN (example: ORD-20250913-0001) 
+# Date-based로 order tracking 및 sorting convenience 제공!! operations team이 좋아함~~~
 OrderNumberType = Annotated[str, StringConstraints(pattern=r"^ORD-\d{8}-\d{4}$")]
 
 

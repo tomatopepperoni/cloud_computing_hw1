@@ -11,41 +11,41 @@ from fastapi import FastAPI, HTTPException
 from fastapi import Query, Path
 from typing import Optional
 
-# 👥 기존 모델들!! Person, Address, Health!! 이미 완성된 모델들!!
+# Existing Models!! Person, Address, Health!! already completed models~~
 from models.person import PersonCreate, PersonRead, PersonUpdate
 from models.address import AddressCreate, AddressRead, AddressUpdate
 from models.health import Health
 
-# 🆕 ===================================================================
-# 새로 추가된 모델들!! 숙제 요구사항에 따른 두 개의 새로운 모델!! 
-# Product: 상품 관리 시스템!! 전자상거래의 핵심!! 🛍️
-# Order: 주문 관리 시스템!! Product와 Person을 연결하는 집계 루트!! 🛒
-# 이 두 모델이 숙제의 핵심!! 완벽하게 구현했음!! ✅
+# ===================================================================
+# 새로 추가된 models!! homework requirement에 따른 two new models!! 
+# Product: 상품 management system!! e-commerce의 core!!
+# Order: 주문 management system!! Product와 Person을 connect하는 aggregate root!!
+# 이 두 models가 homework의 핵심!! perfectly implemented~~~
 # ===================================================================
 from models.product import ProductCreate, ProductRead, ProductUpdate
 from models.order import OrderCreate, OrderRead, OrderUpdate
 
 port = int(os.environ.get("FASTAPIPORT", 8000))
 
-# 💾 ===========================================================================
-# 인메모리 "데이터베이스"!! 개발/테스트용 임시 저장소!! 
-# 실제 운영에서는 PostgreSQL, MongoDB 등으로 대체 필요!! 🗃️
-# 지금은 간단하게 딕셔너리로 구현!! 빠르고 쉬움!! ⚡
 # ===========================================================================
-persons: Dict[UUID, PersonRead] = {}    # 👥 기존: 고객 정보 저장소!! 사용자들!!
-addresses: Dict[UUID, AddressRead] = {} # 🏠 기존: 주소 정보 저장소!! 배송지들!!
+# In-Memory "Database"!! development/testing용 temporary storage!! 
+# 실제 production에서는 PostgreSQL, MongoDB 등으로 replace 필요!!
+# 지금은 simply dictionary로 implementation!! fast and easy~~~
+# ===========================================================================
+persons: Dict[UUID, PersonRead] = {}    # Existing: customer info storage!! users~~
+addresses: Dict[UUID, AddressRead] = {} # Existing: address info storage!! delivery addresses~~
 
-# 🆕 ===================================================================
-# 새로 추가된 저장소들!! 숙제 요구사항에 따른 새로운 리소스들!!
-# 이 두 저장소가 숙제의 핵심!! 완벽하게 구현!! ✅
 # ===================================================================
-products: Dict[UUID, ProductRead] = {}  # 🛍️ 상품 정보 저장소!! SKU 중복 검증 필요!!
-orders: Dict[UUID, OrderRead] = {}      # 🛒 주문 정보 저장소!! 복잡한 비즈니스 로직 포함!!
+# 새로 추가된 storages!! homework requirement에 따른 new resources!!
+# 이 두 storages가 homework의 core!! perfectly implemented~~~
+# ===================================================================
+products: Dict[UUID, ProductRead] = {}  # Product info storage!! SKU duplicate validation 필요!!
+orders: Dict[UUID, OrderRead] = {}      # Order info storage!! complex business logic 포함!!
 
 app = FastAPI(
-    title="🚀 SimpleMicroservices API!! 완벽한 전자상거래 시스템!!",
-    description="🎯 Demo FastAPI app using Pydantic v2 models!! Person, Address, Product, Order!! 숙제 요구사항 완벽 충족!! ✅",
-    version="1.0.0",  # 숙제 완료로 버전 업!!
+    title="SimpleMicroservices API!! perfect e-commerce system~~",
+    description="Demo FastAPI app using Pydantic v2 models!! Person, Address, Product, Order!! homework requirement 완벽 충족!!",
+    version="1.0.0",  # homework 완료로 version up!!
 )
 
 # -----------------------------------------------------------------------------
@@ -119,34 +119,34 @@ def update_address(address_id: UUID, update: AddressUpdate):
     addresses[address_id] = AddressRead(**stored)
     return addresses[address_id]
 
-# 🛍️ ===============================================================================
-# Product 엔드포인트들 - 상품 관리 CRUD API!! 전자상거래의 핵심!!
-# RESTful 설계 원칙에 따른 HTTP 메서드별 기능 구현!! 🚀
-# 비즈니스 로직: SKU 고유성 보장, 재고 관리, 활성화 상태 관리!! 💪
-# 새로 추가된 모델!! 숙제 요구사항 완벽 충족!! ✅
+# ===============================================================================
+# Product Endpoints - 상품 관리 CRUD API!! e-commerce의 핵심!!
+# RESTful design principles에 따른 HTTP method별 기능 implementation!!
+# Business Logic: SKU uniqueness 보장, inventory management, activation status 관리!!
+# 새로 추가된 model!! homework requirement perfectly satisfied~~~
 # ===============================================================================
 
 @app.post("/products", response_model=ProductRead, status_code=201)
 def create_product(product: ProductCreate):
     """
-    🎯 ===================================================================
-    상품 생성 엔드포인트!! 새로운 상품을 시스템에 등록!!
-    - HTTP POST /products 📮
-    - 비즈니스 규칙: SKU 중복 불허!! 재고 관리의 핵심 식별자!! 🏷️
-    - 반환: 201 Created + 생성된 상품 정보!! 서버 생성 필드 포함!! 📋
-    - 중요!! 이 엔드포인트가 없으면 상품 등록 불가!! 💥
+    ===================================================================
+    Product Creation Endpoint!! 새로운 product를 system에 register!!
+    - HTTP POST /products 
+    - Business Rule: SKU duplication 불허!! inventory management의 core identifier!!
+    - Return: 201 Created + created product info!! server generated fields 포함!!
+    - Important!! 이 endpoint가 없으면 product registration impossible!!
     ===================================================================
     """
-    # 🔍 SKU 중복 검증!! O(n) 시간복잡도!! 실제로는 DB 인덱스로 O(1) 가능!!
-    for existing_product in products.values():  # 모든 기존 상품 순회!!
-        if existing_product.sku == product.sku:  # SKU 중복 발견!!
-            # 409 Conflict가 더 적절하지만 400으로 통일!! HTTP 상태코드 일관성!!
+    # SKU Duplicate Validation!! O(n) time complexity!! 실제로는 DB index로 O(1) possible~~
+    for existing_product in products.values():  # 모든 existing products iterate!!
+        if existing_product.sku == product.sku:  # SKU duplicate 발견!!
+            # 409 Conflict가 더 appropriate하지만 400으로 unify!! HTTP status code consistency!!
             raise HTTPException(status_code=400, detail="Product with this SKU already exists")
     
-    # 🔄 DTO → Entity 변환!! 서버 관리 필드 자동 생성!! 
-    product_read = ProductRead(**product.model_dump())  # Pydantic 모델 변환!!
-    products[product_read.id] = product_read  # 인메모리 저장!! UUID로 인덱싱!!
-    return product_read  # 생성된 상품 정보 반환!! 클라이언트에게 확인용!!
+    # DTO → Entity Conversion!! server managed fields automatic generation!! 
+    product_read = ProductRead(**product.model_dump())  # Pydantic model transformation!!
+    products[product_read.id] = product_read  # in-memory storage!! UUID로 indexing!!
+    return product_read  # created product info return!! client에게 confirmation용!!
 
 @app.get("/products", response_model=List[ProductRead])
 def list_products(
@@ -312,49 +312,49 @@ def update_person(person_id: UUID, update: PersonUpdate):
     persons[person_id] = PersonRead(**stored)
     return persons[person_id]
 
-# 🛒 ===============================================================================
-# Order 엔드포인트들 - 주문 관리 CRUD API!! 전자상거래의 최종 보스!!
-# 복잡한 비즈니스 로직을 포함한 전자상거래의 핵심 도메인!! 💰
-# 고객, 상품, 결제를 연결하는 집계 루트(Aggregate Root) 역할!! 🎯
-# 새로 추가된 모델!! 숙제의 핵심 요구사항!! ✅
+# ===============================================================================
+# Order Endpoints - 주문 관리 CRUD API!! e-commerce의 final boss!!
+# Complex business logic을 포함한 e-commerce의 core domain!!
+# Customer, Product, Payment를 connect하는 aggregate root role!!
+# 새로 추가된 model!! homework의 core requirement~~~
 # ===============================================================================
 
 @app.post("/orders", response_model=OrderRead, status_code=201)
 def create_order(order: OrderCreate):
     """
-    🛒 ===================================================================
-    주문 생성 엔드포인트!! 가장 복잡한 비즈니스 로직 포함!! 💥
-    - HTTP POST /orders 📮
-    - 다중 검증: 주문번호 중복, 고객 존재, 상품 존재, 재고 충분!! 🔍
-    - 트랜잭션 처리가 필요한 복합 연산!! 실제로는 DB 트랜잭션 필요!! ⚡
-    - 이 엔드포인트가 전자상거래의 핵심!! 돈이 오가는 곳!! 💰
+    ===================================================================
+    Order Creation Endpoint!! 가장 complex한 business logic 포함!!
+    - HTTP POST /orders 
+    - Multiple Validation: order number duplicate, customer existence, product existence, stock sufficiency!!
+    - Transaction processing이 필요한 composite operation!! 실제로는 DB transaction 필요!!
+    - 이 endpoint가 e-commerce의 핵심!! money flows through here~~
     ===================================================================
     """
-    # 🔍 1. 주문번호 중복 검증!! 비즈니스 규칙: 주문번호는 고유해야 함!! 
-    for existing_order in orders.values():  # 모든 기존 주문 순회!!
-        if existing_order.order_number == order.order_number:  # 중복 발견!!
+    # 1. Order Number Duplicate Validation!! business rule: order number는 unique해야 함!! 
+    for existing_order in orders.values():  # 모든 existing orders iterate!!
+        if existing_order.order_number == order.order_number:  # duplicate 발견!!
             raise HTTPException(status_code=400, detail="Order with this order number already exists")
     
-    # 👤 2. 고객 존재 검증!! 외래키 무결성 제약 조건 시뮬레이션!!
-    if order.customer_id not in persons:  # 고객이 없으면!!
-        raise HTTPException(status_code=400, detail="Customer not found")  # 에러!!
+    # 2. Customer Existence Validation!! foreign key integrity constraint simulation!!
+    if order.customer_id not in persons:  # customer가 없으면!!
+        raise HTTPException(status_code=400, detail="Customer not found")  # error!!
     
-    # 📦 3. 주문 항목별 검증!! 상품 존재 및 재고 충분성 확인!! 매우 중요!!
-    for item in order.items:  # 주문 항목 하나씩 검증!!
-        # 🔍 3-1. 상품 존재 검증!! 없는 상품은 주문 불가!!
-        if item.product_id not in products:  # 상품이 없으면!!
+    # 3. Order Item Validation!! product existence 및 stock sufficiency 확인!! extremely important~~
+    for item in order.items:  # order items 하나씩 validation!!
+        # 3-1. Product Existence Validation!! 없는 product는 order impossible!!
+        if item.product_id not in products:  # product가 없으면!!
             raise HTTPException(status_code=400, detail=f"Product {item.product_id} not found")
         
-        # 📊 3-2. 재고 충분성 검증!! 재고 관리 비즈니스 로직!! 핵심!!
-        product = products[item.product_id]  # 상품 정보 가져오기!!
-        if product.stock_quantity < item.quantity:  # 재고 부족이면!!
+        # 3-2. Stock Sufficiency Validation!! inventory management business logic!! core~~
+        product = products[item.product_id]  # product info 가져오기!!
+        if product.stock_quantity < item.quantity:  # stock 부족이면!!
             raise HTTPException(status_code=400, detail=f"Insufficient stock for product {product.name}")
     
-    # ✅ 모든 검증 통과 시 주문 생성!! 드디어!!
-    # TODO: 실제로는 여기서 재고 차감, 결제 처리 등이 필요!! SAGA 패턴!! 🔄
-    order_read = OrderRead(**order.model_dump())  # DTO → Entity 변환!!
-    orders[order_read.id] = order_read  # 인메모리 저장!! UUID로 인덱싱!!
-    return order_read  # 생성된 주문 정보 반환!! 성공!! 🎉
+    # All Validation Passed!! order creation!! finally~~~
+    # TODO: 실제로는 여기서 stock deduction, payment processing 등이 필요!! SAGA pattern!!
+    order_read = OrderRead(**order.model_dump())  # DTO → Entity conversion!!
+    orders[order_read.id] = order_read  # in-memory storage!! UUID로 indexing!!
+    return order_read  # created order info return!! success!!
 
 @app.get("/orders", response_model=List[OrderRead])
 def list_orders(
