@@ -7,27 +7,28 @@ from decimal import Decimal
 from enum import Enum
 from pydantic import BaseModel, Field, StringConstraints
 
-# -----------------------------------------------------------------------
-# Order 모델: 전자상거래 주문 관리 시스템의 핵심 도메인 모델
-# - 복잡한 비즈니스 로직을 포함한 주문 생명주기 관리
-# - 고객, 상품, 결제 정보를 통합하는 집계 루트(Aggregate Root) 역할
-# - 주문 상태 기계(State Machine) 패턴 적용
-# -----------------------------------------------------------------------
+# 🛒 =========================================================================
+# Order 모델: 전자상거래 주문 관리 시스템의 핵심 도메인 모델!!
+# - 복잡한 비즈니스 로직을 포함한 주문 생명주기 관리!! 📊
+# - 고객, 상품, 결제 정보를 통합하는 집계 루트(Aggregate Root) 역할!! 🎯
+# - 주문 상태 기계(State Machine) 패턴 적용!! 상태 전이 완벽 관리!! ⚡
+# - 전자상거래에서 가장 복잡하고 중요한 모델!! 💰
+# =========================================================================
 
-# 주문 상태 열거형 - 주문의 생명주기를 명확히 정의
-# 상태 전이: PENDING → CONFIRMED → PROCESSING → SHIPPED → DELIVERED
-# 또는 언제든지 CANCELLED로 전이 가능 (비즈니스 규칙에 따라)
+# 📊 주문 상태 열거형 - 주문의 생명주기를 명확히 정의!! 매우 중요!!
+# 상태 전이: PENDING → CONFIRMED → PROCESSING → SHIPPED → DELIVERED ✅
+# 또는 언제든지 CANCELLED로 전이 가능!! 비즈니스 규칙에 따라!! ❌
 class OrderStatus(str, Enum):
-    PENDING = "pending"        # 결제 대기 중
-    CONFIRMED = "confirmed"    # 결제 완료, 처리 대기
-    PROCESSING = "processing"  # 주문 처리 중 (포장, 준비)
-    SHIPPED = "shipped"        # 배송 시작
-    DELIVERED = "delivered"    # 배송 완료
-    CANCELLED = "cancelled"    # 주문 취소
+    PENDING = "pending"        # 💳 결제 대기 중!! 아직 결제 안됨!!
+    CONFIRMED = "confirmed"    # ✅ 결제 완료!! 처리 대기 상태!!
+    PROCESSING = "processing"  # 📦 주문 처리 중!! 포장, 준비 단계!!
+    SHIPPED = "shipped"        # 🚚 배송 시작!! 고객에게 이동 중!!
+    DELIVERED = "delivered"    # 🎉 배송 완료!! 고객이 받음!!
+    CANCELLED = "cancelled"    # ❌ 주문 취소!! 더 이상 진행 안됨!!
 
-# 주문번호 타입 정의 - 표준화된 주문번호 형식 강제
-# 형식: ORD-YYYYMMDD-NNNN (예: ORD-20250913-0001)
-# 날짜 기반으로 주문 추적 및 정렬 용이성 제공
+# 🏷️ 주문번호 타입 정의 - 표준화된 주문번호 형식 강제!! 매우 중요!!
+# 형식: ORD-YYYYMMDD-NNNN (예: ORD-20250913-0001) 📅
+# 날짜 기반으로 주문 추적 및 정렬 용이성 제공!! 운영팀이 좋아함!! 👍
 OrderNumberType = Annotated[str, StringConstraints(pattern=r"^ORD-\d{8}-\d{4}$")]
 
 
