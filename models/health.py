@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
+from datetime import datetime
+import socket
 
 class Health(BaseModel):
     status: int = Field(description="Numeric status code (e.g., 200 for OK)")
@@ -22,3 +24,20 @@ class Health(BaseModel):
             }
         }
     }
+
+
+def make_health(echo: Optional[str] = None, path_echo: Optional[str] = None) -> Health:
+    """Health check response generator!! system status를 return하는 utility function!!"""
+    try:
+        ip_address = socket.gethostbyname(socket.gethostname())
+    except:
+        ip_address = "127.0.0.1"  # fallback!! local development environment!!
+    
+    return Health(
+        status=200,
+        status_message="OK",
+        timestamp=datetime.utcnow().isoformat() + "Z",
+        ip_address=ip_address,
+        echo=echo,
+        path_echo=path_echo
+    )

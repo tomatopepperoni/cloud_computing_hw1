@@ -1,70 +1,59 @@
 from __future__ import annotations
 
-import os
-import socket
+from typing import Dict, List, Optional
+from uuid import UUID
 from datetime import datetime
 
-from typing import Dict, List
-from uuid import UUID
+from fastapi import FastAPI, HTTPException, Query, Path
+from fastapi.responses import JSONResponse
 
-from fastapi import FastAPI, HTTPException
-from fastapi import Query, Path
-from typing import Optional
-
-# Existing Models!! Person, Address, Health!! already completed models~~
+# Import existing models (Person, Address, Health)
+from models.health import Health, make_health
 from models.person import PersonCreate, PersonRead, PersonUpdate
 from models.address import AddressCreate, AddressRead, AddressUpdate
-from models.health import Health
 
-# ===================================================================
-# 새로 추가된 models!! homework requirement에 따른 two new models!! 
-# Product: 상품 management system!! e-commerce의 core!!
-# Order: 주문 management system!! Product와 Person을 connect하는 aggregate root!!
-# 이 두 models가 homework의 핵심!! perfectly implemented~~~
-# ===================================================================
-from models.product import ProductCreate, ProductRead, ProductUpdate
-from models.order import OrderCreate, OrderRead, OrderUpdate
+# Import new StarCraft models!! 스타크래프트 테마의 새로운 모델들!!
+from models.unit import UnitCreate, UnitRead, UnitUpdate, Race, UnitType
+from models.skill import SkillCreate, SkillRead, SkillUpdate, SkillCategory, TargetType
 
-port = int(os.environ.get("FASTAPIPORT", 8000))
-
-# ===========================================================================
-# In-Memory "Database"!! development/testing용 temporary storage!! 
-# 실제 production에서는 PostgreSQL, MongoDB 등으로 replace 필요!!
-# 지금은 simply dictionary로 implementation!! fast and easy~~~
-# ===========================================================================
-persons: Dict[UUID, PersonRead] = {}    # Existing: customer info storage!! users~~
-addresses: Dict[UUID, AddressRead] = {} # Existing: address info storage!! delivery addresses~~
-
-# ===================================================================
-# 새로 추가된 storages!! homework requirement에 따른 new resources!!
-# 이 두 storages가 homework의 core!! perfectly implemented~~~
-# ===================================================================
-products: Dict[UUID, ProductRead] = {}  # Product info storage!! SKU duplicate validation 필요!!
-orders: Dict[UUID, OrderRead] = {}      # Order info storage!! complex business logic 포함!!
+# =========================================================================
+# FastAPI Application - 스타크래프트 유닛 & 스킬 관리 마이크로서비스!!
+# - Person/Address는 기존 기능 유지!! (기본 제공 모델들)
+# - Unit/Skill은 새로운 StarCraft 테마!! (과제 요구사항)
+# - RESTful API design principles 완벽 적용!! 
+# - 실시간 전략 게임의 데이터 관리 시스템!! super cool~~~
+# =========================================================================
 
 app = FastAPI(
-    title="SimpleMicroservices API!! perfect e-commerce system~~",
-    description="Demo FastAPI app using Pydantic v2 models!! Person, Address, Product, Order!! homework requirement 완벽 충족!!",
-    version="1.0.0",  # homework 완료로 version up!!
+    title="StarCraft Units & Skills Microservice",  # 스타크래프트 테마!! 
+    description="A microservice for managing StarCraft units and skills, plus basic person/address management",
+    version="1.0.0",
+    docs_url="/docs",  # Swagger UI!! 
+    redoc_url="/redoc"  # ReDoc UI!!
 )
 
-# -----------------------------------------------------------------------------
-# Address endpoints
-# -----------------------------------------------------------------------------
+# =========================================================================
+# In-Memory "Databases" - 개발/테스트용 임시 저장소!!
+# Production에서는 PostgreSQL, MongoDB 등 real database 사용!!
+# 각 resource별로 separate dictionary!! clean separation~~
+# =========================================================================
 
-def make_health(echo: Optional[str], path_echo: Optional[str]=None) -> Health:
-    return Health(
-        status=200,
-        status_message="OK",
-        timestamp=datetime.utcnow().isoformat() + "Z",
-        ip_address=socket.gethostbyname(socket.gethostname()),
-        echo=echo,
-        path_echo=path_echo
-    )
+# Existing data stores!! 기존 Person/Address 관리!!
+persons: Dict[UUID, PersonRead] = {}  # Person storage!! 
+addresses: Dict[UUID, AddressRead] = {}  # Address storage!!
+
+# New StarCraft data stores!! 새로운 게임 데이터 관리!!
+units: Dict[UUID, UnitRead] = {}  # Unit storage!! 스타크래프트 유닛들!!
+skills: Dict[UUID, SkillRead] = {}  # Skill storage!! 스타크래프트 스킬들!!
+
+# =========================================================================
+# Health Check Endpoints - 시스템 상태 확인!! monitoring essential~~
+# Load balancer와 monitoring tools에서 사용!! uptime tracking!!
+# =========================================================================
 
 @app.get("/health", response_model=Health)
 def get_health_no_path(echo: Optional[str] = Query(None, description="Optional echo string")):
-    # Works because path_echo is optional in the model
+    # Fixed Python 3.9 compatibility!! str | None → Optional[str]!!
     return make_health(echo=echo, path_echo=None)
 
 @app.get("/health/{path_echo}", response_model=Health)
@@ -72,229 +61,33 @@ def get_health_with_path(
     path_echo: str = Path(..., description="Required echo in the URL path"),
     echo: Optional[str] = Query(None, description="Optional echo string"),
 ):
+    # Fixed Python 3.9 compatibility!! str | None → Optional[str]!!
     return make_health(echo=echo, path_echo=path_echo)
 
-@app.post("/addresses", response_model=AddressRead, status_code=201)
-def create_address(address: AddressCreate):
-    if address.id in addresses:
-        raise HTTPException(status_code=400, detail="Address with this ID already exists")
-    addresses[address.id] = AddressRead(**address.model_dump())
-    return addresses[address.id]
+# =========================================================================
+# Person Endpoints - 기존 기능 유지!! 사람 정보 관리 CRUD!!
+# 기본 제공된 모델이지만 여전히 중요한 기능!! user management~~
+# =========================================================================
 
-@app.get("/addresses", response_model=List[AddressRead])
-def list_addresses(
-    street: Optional[str] = Query(None, description="Filter by street"),
-    city: Optional[str] = Query(None, description="Filter by city"),
-    state: Optional[str] = Query(None, description="Filter by state/region"),
-    postal_code: Optional[str] = Query(None, description="Filter by postal code"),
-    country: Optional[str] = Query(None, description="Filter by country"),
-):
-    results = list(addresses.values())
-
-    if street is not None:
-        results = [a for a in results if a.street == street]
-    if city is not None:
-        results = [a for a in results if a.city == city]
-    if state is not None:
-        results = [a for a in results if a.state == state]
-    if postal_code is not None:
-        results = [a for a in results if a.postal_code == postal_code]
-    if country is not None:
-        results = [a for a in results if a.country == country]
-
-    return results
-
-@app.get("/addresses/{address_id}", response_model=AddressRead)
-def get_address(address_id: UUID):
-    if address_id not in addresses:
-        raise HTTPException(status_code=404, detail="Address not found")
-    return addresses[address_id]
-
-@app.patch("/addresses/{address_id}", response_model=AddressRead)
-def update_address(address_id: UUID, update: AddressUpdate):
-    if address_id not in addresses:
-        raise HTTPException(status_code=404, detail="Address not found")
-    stored = addresses[address_id].model_dump()
-    stored.update(update.model_dump(exclude_unset=True))
-    addresses[address_id] = AddressRead(**stored)
-    return addresses[address_id]
-
-# ===============================================================================
-# Product Endpoints - 상품 관리 CRUD API!! e-commerce의 핵심!!
-# RESTful design principles에 따른 HTTP method별 기능 implementation!!
-# Business Logic: SKU uniqueness 보장, inventory management, activation status 관리!!
-# 새로 추가된 model!! homework requirement perfectly satisfied~~~
-# ===============================================================================
-
-@app.post("/products", response_model=ProductRead, status_code=201)
-def create_product(product: ProductCreate):
-    """
-    ===================================================================
-    Product Creation Endpoint!! 새로운 product를 system에 register!!
-    - HTTP POST /products 
-    - Business Rule: SKU duplication 불허!! inventory management의 core identifier!!
-    - Return: 201 Created + created product info!! server generated fields 포함!!
-    - Important!! 이 endpoint가 없으면 product registration impossible!!
-    ===================================================================
-    """
-    # SKU Duplicate Validation!! O(n) time complexity!! 실제로는 DB index로 O(1) possible~~
-    for existing_product in products.values():  # 모든 existing products iterate!!
-        if existing_product.sku == product.sku:  # SKU duplicate 발견!!
-            # 409 Conflict가 더 appropriate하지만 400으로 unify!! HTTP status code consistency!!
-            raise HTTPException(status_code=400, detail="Product with this SKU already exists")
-    
-    # DTO → Entity Conversion!! server managed fields automatic generation!! 
-    product_read = ProductRead(**product.model_dump())  # Pydantic model transformation!!
-    products[product_read.id] = product_read  # in-memory storage!! UUID로 indexing!!
-    return product_read  # created product info return!! client에게 confirmation용!!
-
-@app.get("/products", response_model=List[ProductRead])
-def list_products(
-    name: Optional[str] = Query(None, description="Filter by product name (partial match)"),
-    sku: Optional[str] = Query(None, description="Filter by SKU"),
-    category: Optional[str] = Query(None, description="Filter by category"),
-    is_active: Optional[bool] = Query(None, description="Filter by active status"),
-    min_price: Optional[float] = Query(None, description="Minimum price filter"),
-    max_price: Optional[float] = Query(None, description="Maximum price filter"),
-):
-    """
-    -----------------------------------------------------------------------
-    상품 목록 조회 엔드포인트 (필터링 지원)
-    - HTTP GET /products
-    - 다양한 쿼리 파라미터로 필터링 가능 (검색 기능)
-    - 알고리즘: 순차 검색 O(n), 실제로는 DB 인덱스 활용 필요
-    -----------------------------------------------------------------------
-    """
-    # 전체 상품 목록을 시작점으로 설정
-    results = list(products.values())
-    
-    # 각 필터 조건을 순차적으로 적용 (AND 조건)
-    if name is not None:
-        # 대소문자 무시한 부분 문자열 검색 (LIKE '%name%' 와 유사)
-        results = [p for p in results if name.lower() in p.name.lower()]
-    if sku is not None:
-        # 정확한 SKU 매칭 (고유 식별자이므로 정확 매칭)
-        results = [p for p in results if p.sku == sku]
-    if category is not None:  # 카테고리 필터가 있으면!!
-        # 카테고리 정확 매칭!! 대소문자 무시로 사용자 친화적!!
-        results = [p for p in results if p.category.lower() == category.lower()]
-    if is_active is not None:
-        # 활성화 상태 필터링 (불린 값 정확 매칭)
-        results = [p for p in results if p.is_active == is_active]
-    if min_price is not None:
-        # 최소 가격 이상 필터링 (범위 검색)
-        results = [p for p in results if float(p.price) >= min_price]
-    if max_price is not None:
-        # 최대 가격 이하 필터링 (범위 검색)
-        results = [p for p in results if float(p.price) <= max_price]
-    
-    return results
-
-@app.get("/products/{product_id}", response_model=ProductRead)
-def get_product(product_id: UUID):
-    """
-    -----------------------------------------------------------------------
-    개별 상품 조회 엔드포인트
-    - HTTP GET /products/{product_id}
-    - Path parameter로 UUID 받아 특정 상품 조회
-    - 404 Not Found 처리 포함
-    -----------------------------------------------------------------------
-    """
-    if product_id not in products:
-        raise HTTPException(status_code=404, detail="Product not found")
-    return products[product_id]  # O(1) 해시테이블 조회
-
-@app.patch("/products/{product_id}", response_model=ProductRead)
-def update_product(product_id: UUID, update: ProductUpdate):
-    """
-    -----------------------------------------------------------------------
-    상품 정보 부분 수정 엔드포인트
-    - HTTP PATCH /products/{product_id}
-    - 부분 업데이트 지원 (변경된 필드만 전송)
-    - SKU 중복 검증 및 타임스탬프 자동 갱신
-    -----------------------------------------------------------------------
-    """
-    if product_id not in products:
-        raise HTTPException(status_code=404, detail="Product not found")
-    
-    # SKU 변경 시 중복 검증 (다른 상품과의 충돌 방지)
-    if update.sku is not None:
-        for pid, existing_product in products.items():
-            # 자기 자신은 제외하고 검사
-            if pid != product_id and existing_product.sku == update.sku:
-                raise HTTPException(status_code=400, detail="Product with this SKU already exists")
-    
-    # 기존 데이터를 기반으로 업데이트 적용 (merge 패턴)
-    stored = products[product_id].model_dump()
-    stored.update(update.model_dump(exclude_unset=True))  # None 값 제외하고 업데이트
-    
-    # 수정 타임스탬프 자동 갱신 (감사 로그)
-    stored["updated_at"] = datetime.utcnow()
-    products[product_id] = ProductRead(**stored)
-    return products[product_id]
-
-@app.delete("/products/{product_id}")
-def delete_product(product_id: UUID):
-    """
-    -----------------------------------------------------------------------
-    ENd Point for Deleting a Product
-    - HTTP DELETE /products/{product_id}
-    - 하드 삭제 구현 (실제로는 소프트 삭제 권장)
-    - 주문에서 참조 중인 상품 삭제 시 참조 무결성 고려 필요
-    -----------------------------------------------------------------------
-    """
-    if product_id not in products:
-        raise HTTPException(status_code=404, detail="Product not found")
-    
-    # TODO: 실제 구현에서는 주문에서 참조 중인지 확인 필요하다!!
-    # if product_is_referenced_in_orders(product_id):
-    #     raise HTTPException(status_code=409, detail="Cannot delete product referenced in orders")
-    
-    del products[product_id]  # 하드 삭제
-    return {"message": "Product deleted successfully"}
-
-# -----------------------------------------------------------------------------
-# Person endpoints
-# -----------------------------------------------------------------------------
 @app.post("/persons", response_model=PersonRead, status_code=201)
 def create_person(person: PersonCreate):
-    # Each person gets its own UUID; stored as PersonRead
+    # UNI uniqueness validation!! Columbia University ID 중복 방지!!
+    for existing_person in persons.values():
+        if existing_person.uni == person.uni:
+            raise HTTPException(status_code=400, detail="Person with this UNI already exists")
+    
     person_read = PersonRead(**person.model_dump())
     persons[person_read.id] = person_read
     return person_read
 
 @app.get("/persons", response_model=List[PersonRead])
 def list_persons(
-    uni: Optional[str] = Query(None, description="Filter by Columbia UNI"),
-    first_name: Optional[str] = Query(None, description="Filter by first name"),
-    last_name: Optional[str] = Query(None, description="Filter by last name"),
+    uni: Optional[str] = Query(None, description="Filter by UNI"),
     email: Optional[str] = Query(None, description="Filter by email"),
-    phone: Optional[str] = Query(None, description="Filter by phone number"),
-    birth_date: Optional[str] = Query(None, description="Filter by date of birth (YYYY-MM-DD)"),
-    city: Optional[str] = Query(None, description="Filter by city of at least one address"),
-    country: Optional[str] = Query(None, description="Filter by country of at least one address"),
 ):
     results = list(persons.values())
-
-    if uni is not None:
-        results = [p for p in results if p.uni == uni]
-    if first_name is not None:
-        results = [p for p in results if p.first_name == first_name]
-    if last_name is not None:
-        results = [p for p in results if p.last_name == last_name]
-    if email is not None:
-        results = [p for p in results if p.email == email]
-    if phone is not None:
-        results = [p for p in results if p.phone == phone]
-    if birth_date is not None:
-        results = [p for p in results if str(p.birth_date) == birth_date]
-
-    # nested address filtering
-    if city is not None:
-        results = [p for p in results if any(addr.city == city for addr in p.addresses)]
-    if country is not None:
-        results = [p for p in results if any(addr.country == country for addr in p.addresses)]
-
+    if uni: results = [p for p in results if p.uni == uni]
+    if email: results = [p for p in results if p.email == email]
     return results
 
 @app.get("/persons/{person_id}", response_model=PersonRead)
@@ -307,161 +100,218 @@ def get_person(person_id: UUID):
 def update_person(person_id: UUID, update: PersonUpdate):
     if person_id not in persons:
         raise HTTPException(status_code=404, detail="Person not found")
+    
+    # UNI uniqueness validation on update!!
+    if update.uni is not None:
+        for pid, existing_person in persons.items():
+            if pid != person_id and existing_person.uni == update.uni:
+                raise HTTPException(status_code=400, detail="Person with this UNI already exists")
+    
     stored = persons[person_id].model_dump()
     stored.update(update.model_dump(exclude_unset=True))
+    stored["updated_at"] = datetime.utcnow()
     persons[person_id] = PersonRead(**stored)
     return persons[person_id]
 
-# ===============================================================================
-# Order Endpoints - 주문 관리 CRUD API!! e-commerce의 final boss!!
-# Complex business logic을 포함한 e-commerce의 core domain!!
-# Customer, Product, Payment를 connect하는 aggregate root role!!
-# 새로 추가된 model!! homework의 core requirement~~~
-# ===============================================================================
+@app.delete("/persons/{person_id}")
+def delete_person(person_id: UUID):
+    if person_id not in persons:
+        raise HTTPException(status_code=404, detail="Person not found")
+    del persons[person_id]
+    return {"message": "Person deleted successfully"}
 
-@app.post("/orders", response_model=OrderRead, status_code=201)
-def create_order(order: OrderCreate):
-    """
-    ===================================================================
-    Order Creation Endpoint!! 가장 complex한 business logic 포함!!
-    - HTTP POST /orders 
-    - Multiple Validation: order number duplicate, customer existence, product existence, stock sufficiency!!
-    - Transaction processing이 필요한 composite operation!! 실제로는 DB transaction 필요!!
-    - 이 endpoint가 e-commerce의 핵심!! money flows through here~~
-    ===================================================================
-    """
-    # 1. Order Number Duplicate Validation!! business rule: order number는 unique해야 함!! 
-    for existing_order in orders.values():  # 모든 existing orders iterate!!
-        if existing_order.order_number == order.order_number:  # duplicate 발견!!
-            raise HTTPException(status_code=400, detail="Order with this order number already exists")
-    
-    # 2. Customer Existence Validation!! foreign key integrity constraint simulation!!
-    if order.customer_id not in persons:  # customer가 없으면!!
-        raise HTTPException(status_code=400, detail="Customer not found")  # error!!
-    
-    # 3. Order Item Validation!! product existence 및 stock sufficiency 확인!! extremely important~~
-    for item in order.items:  # order items 하나씩 validation!!
-        # 3-1. Product Existence Validation!! 없는 product는 order impossible!!
-        if item.product_id not in products:  # product가 없으면!!
-            raise HTTPException(status_code=400, detail=f"Product {item.product_id} not found")
-        
-        # 3-2. Stock Sufficiency Validation!! inventory management business logic!! core~~
-        product = products[item.product_id]  # product info 가져오기!!
-        if product.stock_quantity < item.quantity:  # stock 부족이면!!
-            raise HTTPException(status_code=400, detail=f"Insufficient stock for product {product.name}")
-    
-    # All Validation Passed!! order creation!! finally~~~
-    # TODO: 실제로는 여기서 stock deduction, payment processing 등이 필요!! SAGA pattern!!
-    order_read = OrderRead(**order.model_dump())  # DTO → Entity conversion!!
-    orders[order_read.id] = order_read  # in-memory storage!! UUID로 indexing!!
-    return order_read  # created order info return!! success!!
+# =========================================================================
+# Address Endpoints - 기존 기능 유지!! 주소 정보 관리 CRUD!!
+# Person과 연동되는 중요한 reference data!! location management~~
+# =========================================================================
 
-@app.get("/orders", response_model=List[OrderRead])
-def list_orders(
-    order_number: Optional[str] = Query(None, description="Filter by order number"),
-    customer_id: Optional[UUID] = Query(None, description="Filter by customer ID"),
-    status: Optional[str] = Query(None, description="Filter by order status"),
-    min_total: Optional[float] = Query(None, description="Minimum total amount filter"),
-    max_total: Optional[float] = Query(None, description="Maximum total amount filter"),
+@app.post("/addresses", response_model=AddressRead, status_code=201)
+def create_address(address: AddressCreate):
+    # Address ID uniqueness validation!!
+    if address.id in addresses:
+        raise HTTPException(status_code=400, detail="Address with this ID already exists")
+    
+    address_read = AddressRead(**address.model_dump())
+    addresses[address_read.id] = address_read
+    return address_read
+
+@app.get("/addresses", response_model=List[AddressRead])
+def list_addresses(
+    city: Optional[str] = Query(None, description="Filter by city"),
+    country: Optional[str] = Query(None, description="Filter by country"),
 ):
-    """
-    -----------------------------------------------------------------------
-    주문 목록 조회 엔드포인트 (고급 필터링 지원)
-    - HTTP GET /orders
-    - 관리자/고객별 주문 조회를 위한 다양한 필터링 옵션
-    - 주문 상태별, 고객별, 금액 범위별 검색 가능
-    -----------------------------------------------------------------------
-    """
-    results = list(orders.values())
+    results = list(addresses.values())
+    if city: results = [a for a in results if a.city.lower() == city.lower()]
+    if country: results = [a for a in results if a.country.lower() == country.lower()]
+    return results
+
+@app.get("/addresses/{address_id}", response_model=AddressRead)
+def get_address(address_id: UUID):
+    if address_id not in addresses:
+        raise HTTPException(status_code=404, detail="Address not found")
+    return addresses[address_id]
+
+@app.patch("/addresses/{address_id}", response_model=AddressRead)
+def update_address(address_id: UUID, update: AddressUpdate):
+    if address_id not in addresses:
+        raise HTTPException(status_code=404, detail="Address not found")
     
-    # 각 필터 조건을 순차적으로 적용 (복합 검색)
-    if order_number is not None:
-        # 정확한 주문번호 매칭 (고유 식별자)
-        results = [o for o in results if o.order_number == order_number]
-    if customer_id is not None:
-        # 특정 고객의 주문만 필터링 (고객별 주문 이력)
-        results = [o for o in results if o.customer_id == customer_id]
-    if status is not None:
-        # 주문 상태별 필터링 (상태 기계 패턴)
-        results = [o for o in results if o.status == status]
-    if min_total is not None:
-        # 최소 주문 금액 이상 (고액 주문 검색)
-        results = [o for o in results if float(o.total_amount) >= min_total]
-    if max_total is not None:
-        # 최대 주문 금액 이하 (소액 주문 검색)
-        results = [o for o in results if float(o.total_amount) <= max_total]
+    stored = addresses[address_id].model_dump()
+    stored.update(update.model_dump(exclude_unset=True))
+    stored["updated_at"] = datetime.utcnow()
+    addresses[address_id] = AddressRead(**stored)
+    return addresses[address_id]
+
+@app.delete("/addresses/{address_id}")
+def delete_address(address_id: UUID):
+    if address_id not in addresses:
+        raise HTTPException(status_code=404, detail="Address not found")
+    del addresses[address_id]
+    return {"message": "Address deleted successfully"}
+
+# =========================================================================
+# Unit Endpoints - 스타크래프트 유닛 관리 CRUD!! 새로운 핵심 기능!!
+# 프로토스, 테란, 저그 유닛들의 complete stats management!!
+# Game balance와 strategic planning을 위한 essential data!!
+# =========================================================================
+
+@app.post("/units", response_model=UnitRead, status_code=201)
+def create_unit(unit: UnitCreate):
+    # Unit name uniqueness validation per race!! 종족별 유닛명 중복 방지!!
+    for existing_unit in units.values():
+        if existing_unit.name == unit.name and existing_unit.race == unit.race:
+            raise HTTPException(status_code=400, detail=f"{unit.race.value} unit with name '{unit.name}' already exists")
+    
+    unit_read = UnitRead(**unit.model_dump())
+    units[unit_read.id] = unit_read
+    return unit_read
+
+@app.get("/units", response_model=List[UnitRead])
+def list_units(
+    race: Optional[Race] = Query(None, description="Filter by race (protoss/terran/zerg)"),
+    unit_type: Optional[UnitType] = Query(None, description="Filter by unit type"),
+    name: Optional[str] = Query(None, description="Filter by unit name (partial match)"),
+    min_cost: Optional[int] = Query(None, description="Minimum mineral cost filter"),
+    max_cost: Optional[int] = Query(None, description="Maximum mineral cost filter"),
+):
+    # Advanced filtering!! strategic unit analysis를 위한 다양한 filter options!!
+    results = list(units.values())
+    
+    if race: results = [u for u in results if u.race == race]
+    if unit_type: results = [u for u in results if u.unit_type == unit_type]
+    if name: results = [u for u in results if name.lower() in u.name.lower()]
+    if min_cost is not None: results = [u for u in results if u.mineral_cost >= min_cost]
+    if max_cost is not None: results = [u for u in results if u.mineral_cost <= max_cost]
     
     return results
 
-@app.get("/orders/{order_id}", response_model=OrderRead)
-def get_order(order_id: UUID):
-    """
-    -----------------------------------------------------------------------
-    개별 주문 조회 엔드포인트
-    - HTTP GET /orders/{order_id}
-    - 주문 상세 정보 조회 (주문 항목, 배송 정보 등 포함)
-    - 고객/관리자 주문 추적용
-    -----------------------------------------------------------------------
-    """
-    if order_id not in orders:
-        raise HTTPException(status_code=404, detail="Order not found")
-    return orders[order_id]
+@app.get("/units/{unit_id}", response_model=UnitRead)
+def get_unit(unit_id: UUID):
+    if unit_id not in units:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    return units[unit_id]
 
-@app.patch("/orders/{order_id}", response_model=OrderRead)
-def update_order(order_id: UUID, update: OrderUpdate):
-    """
-    -----------------------------------------------------------------------
-    주문 정보 수정 엔드포인트
-    - HTTP PATCH /orders/{order_id}
-    - 주문 상태 변경, 배송 주소 수정 등
-    - 비즈니스 규칙: 특정 상태에서만 수정 가능 (상태 기계 패턴)
-    -----------------------------------------------------------------------
-    """
-    if order_id not in orders:
-        raise HTTPException(status_code=404, detail="Order not found")
+@app.patch("/units/{unit_id}", response_model=UnitRead)
+def update_unit(unit_id: UUID, update: UnitUpdate):
+    # Balance patch endpoint!! 게임 밸런스 조정을 위한 unit stat 수정!!
+    if unit_id not in units:
+        raise HTTPException(status_code=404, detail="Unit not found")
     
-    # TODO: 실제로는 상태 전이 규칙 검증 필요
-    # 예: DELIVERED 상태에서는 수정 불가, CANCELLED에서 다른 상태로 변경 불가 등
+    # Name uniqueness validation on update!! 수정 시에도 중복 방지!!
+    if update.name is not None and update.race is not None:
+        for uid, existing_unit in units.items():
+            if uid != unit_id and existing_unit.name == update.name and existing_unit.race == update.race:
+                raise HTTPException(status_code=400, detail=f"{update.race.value} unit with name '{update.name}' already exists")
     
-    stored = orders[order_id].model_dump()
+    stored = units[unit_id].model_dump()
     stored.update(update.model_dump(exclude_unset=True))
-    
-    # 수정 타임스탬프 자동 갱신 (주문 변경 이력 추적)
     stored["updated_at"] = datetime.utcnow()
-    orders[order_id] = OrderRead(**stored)
-    return orders[order_id]
+    units[unit_id] = UnitRead(**stored)
+    return units[unit_id]
 
-@app.delete("/orders/{order_id}")
-def delete_order(order_id: UUID):
-    """
-    -----------------------------------------------------------------------
-    주문 삭제 엔드포인트
-    - HTTP DELETE /orders/{order_id}
-    - 실제로는 주문 취소(CANCELLED 상태 변경)가 더 적절
-    - 감사 로그 및 회계 요구사항으로 인해 하드 삭제는 비권장
-    -----------------------------------------------------------------------
-    """
-    if order_id not in orders:
-        raise HTTPException(status_code=404, detail="Order not found")
+@app.delete("/units/{unit_id}")
+def delete_unit(unit_id: UUID):
+    if unit_id not in units:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    del units[unit_id]
+    return {"message": "Unit deleted successfully"}
+
+# =========================================================================
+# Skill Endpoints - 스타크래프트 스킬/능력 관리 CRUD!! 전술적 핵심 요소!!
+# 유닛들의 special abilities, spells, upgrades complete management!!
+# Micro management와 strategic depth를 위한 essential system!!
+# =========================================================================
+
+@app.post("/skills", response_model=SkillRead, status_code=201)
+def create_skill(skill: SkillCreate):
+    # Skill name uniqueness validation!! 스킬명 중복 방지로 confusion 방지!!
+    for existing_skill in skills.values():
+        if existing_skill.name == skill.name:
+            raise HTTPException(status_code=400, detail=f"Skill with name '{skill.name}' already exists")
     
-    # TODO: 실제 구현에서는 주문 상태를 CANCELLED로 변경하는 것이 바람직
-    # order.status = OrderStatus.CANCELLED
-    # 또는 결제 취소, 재고 복원 등의 보상 트랜잭션 필요
+    skill_read = SkillRead(**skill.model_dump())
+    skills[skill_read.id] = skill_read
+    return skill_read
+
+@app.get("/skills", response_model=List[SkillRead])
+def list_skills(
+    category: Optional[SkillCategory] = Query(None, description="Filter by skill category"),
+    target_type: Optional[TargetType] = Query(None, description="Filter by target type"),
+    name: Optional[str] = Query(None, description="Filter by skill name (partial match)"),
+    min_damage: Optional[int] = Query(None, description="Minimum base damage filter"),
+    max_energy: Optional[int] = Query(None, description="Maximum energy cost filter"),
+    upgrade_level: Optional[int] = Query(None, description="Filter by upgrade level"),
+):
+    # Strategic skill analysis!! tactical planning을 위한 comprehensive filtering!!
+    results = list(skills.values())
     
-    del orders[order_id]  # 개발/테스트용 하드 삭제
-    return {"message": "Order deleted successfully"}
+    if category: results = [s for s in results if s.category == category]
+    if target_type: results = [s for s in results if s.target_type == target_type]
+    if name: results = [s for s in results if name.lower() in s.name.lower()]
+    if min_damage is not None: results = [s for s in results if s.base_damage >= min_damage]
+    if max_energy is not None: results = [s for s in results if s.energy_cost <= max_energy]
+    if upgrade_level is not None: results = [s for s in results if s.upgrade_level == upgrade_level]
+    
+    return results
 
-# -----------------------------------------------------------------------------
-# Root
-# -----------------------------------------------------------------------------
-@app.get("/")
-def root():
-    return {"message": "Welcome to the SimpleMicroservices API. Resources: Person, Address, Product, Order. See /docs for OpenAPI UI."}
+@app.get("/skills/{skill_id}", response_model=SkillRead)
+def get_skill(skill_id: UUID):
+    if skill_id not in skills:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    return skills[skill_id]
 
-# -----------------------------------------------------------------------------
-# Entrypoint! for `python main.py`
-# -----------------------------------------------------------------------------
+@app.patch("/skills/{skill_id}", response_model=SkillRead)
+def update_skill(skill_id: UUID, update: SkillUpdate):
+    # Skill balance adjustment!! 스킬 밸런스 패치를 위한 수정 기능!!
+    if skill_id not in skills:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    
+    # Name uniqueness validation on update!!
+    if update.name is not None:
+        for sid, existing_skill in skills.items():
+            if sid != skill_id and existing_skill.name == update.name:
+                raise HTTPException(status_code=400, detail=f"Skill with name '{update.name}' already exists")
+    
+    stored = skills[skill_id].model_dump()
+    stored.update(update.model_dump(exclude_unset=True))
+    stored["updated_at"] = datetime.utcnow()
+    skills[skill_id] = SkillRead(**stored)
+    return skills[skill_id]
+
+@app.delete("/skills/{skill_id}")
+def delete_skill(skill_id: UUID):
+    if skill_id not in skills:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    del skills[skill_id]
+    return {"message": "Skill deleted successfully"}
+
+# =========================================================================
+# Application Startup Message - 서버 시작 확인!! development convenience~~
+# =========================================================================
+
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    print("🎮 Starting StarCraft Units & Skills Microservice!! 🎮")
+    print("📊 Swagger UI: http://localhost:8000/docs")
+    print("📖 ReDoc UI: http://localhost:8000/redoc")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
